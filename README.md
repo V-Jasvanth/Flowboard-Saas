@@ -1,36 +1,164 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FlowBoard SaaS
 
-## Getting Started
+<p align="center">
+A modern Jira-inspired SaaS project management platform built with Next.js.
+</p>
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Overview
+
+FlowBoard is a full-stack project management application inspired by Jira. It enables teams to manage projects, organize tasks with a Kanban board, monitor analytics, collaborate within workspaces, and track project progress through an intuitive dashboard.
+
+---
+
+## Features
+
+### Authentication
+- User Registration
+- Secure Login
+- Email OTP Verification
+- User Profile
+
+### Workspace Management
+- Create Workspace
+- Workspace Settings
+- Team Management
+- Member Roles
+
+### Project Management
+- Create Projects
+- Update Projects
+- Delete Projects
+- Project Settings
+
+### Kanban Board
+- Multiple Columns
+- Drag & Drop Tasks
+- Task Priorities
+- Due Dates
+- Task Details
+- Comments
+- Labels
+
+### Dashboard
+- Project Overview
+- Recent Activity
+- Task Summary
+- Productivity Metrics
+
+### Analytics
+- Task Distribution
+- Completion Statistics
+- Progress Charts
+
+### Notifications
+- In-App Notifications
+- Activity Tracking
+
+### Search
+- Global Task Search
+- Project Search
+- User Search
+
+---
+
+# Tech Stack
+
+### Frontend
+
+- Next.js
+- React
+- JavaScript
+- CSS
+
+### Backend
+
+- Next.js API Routes
+- SQLite
+
+### Tools
+
+- Git
+- GitHub
+- Vercel
+
+---
+
+# Project Structure
+
+```
+src
+│
+├── app
+│   ├── api
+│   ├── dashboard
+│   ├── login
+│   ├── register
+│   └── ...
+│
+├── components
+│
+├── contexts
+│
+├── lib
+│
+└── middleware.js
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+# Installation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+git clone https://github.com/V-Jasvanth/Flowboard-Saas.git
 
-## Learn More
+cd Flowboard-Saas
 
-To learn more about Next.js, take a look at the following resources:
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+# Environment Variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Create a `.env.local` file and configure the required environment variables before running the application.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Example:
+
+```env
+JWT_SECRET=your_secret
+```
+
+(Add any other variables your project requires.)
+
+---
+
+# Current Status
+
+Current Version: **v1.0.0**
+
+Production Ready
+
+---
+
+# Future Improvements
+
+- Password Reset
+- Team Invitations
+- Real-time Collaboration
+- PostgreSQL Migration
+- Docker Support
+- Redis Integration
+- WebSockets
+- CI/CD Pipeline
+
+---
+
+# Author
+
+**Vekanuru Jasvanth**
+
+GitHub: https://github.com/V-Jasvanth

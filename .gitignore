@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# SQLite database
+flowboard.db
+flowboard.db-shm
+flowboard.db-wal
+
+# SQLite database
+flowboard.db
+flowboard.db-shm
+flowboard.db-wal

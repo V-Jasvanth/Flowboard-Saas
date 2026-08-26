@@ -14,7 +14,7 @@ export async function GET(request, { params }) {
     const db = getDatabase();
 
     // Verify board exists and user has access
-    const board = db.prepare(`
+    const board = await db.prepare(`
       SELECT b.*, p.workspace_id FROM boards b
       INNER JOIN projects p ON p.id = b.project_id
       WHERE b.id = ?
@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Board not found' }, { status: 404 });
     }
 
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(board.workspace_id, user.id);
 
@@ -32,7 +32,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const columns = db.prepare(
+    const columns = await db.prepare(
       'SELECT * FROM columns WHERE board_id = ? ORDER BY position ASC'
     ).all(boardId);
 
@@ -57,7 +57,7 @@ export async function POST(request, { params }) {
     const db = getDatabase();
 
     // Verify board exists and user has access
-    const board = db.prepare(`
+    const board = await db.prepare(`
       SELECT b.*, p.workspace_id FROM boards b
       INNER JOIN projects p ON p.id = b.project_id
       WHERE b.id = ?
@@ -67,7 +67,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Board not found' }, { status: 404 });
     }
 
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(board.workspace_id, user.id);
 
@@ -82,17 +82,17 @@ export async function POST(request, { params }) {
     }
 
     // Get the next position
-    const maxPos = db.prepare(
+    const maxPos = await db.prepare(
       'SELECT MAX(position) as max_pos FROM columns WHERE board_id = ?'
     ).get(boardId);
-    const position = (maxPos.max_pos ?? -1) + 1;
+    const position = ((maxPos?.max_pos) ?? -1) + 1;
 
     const columnId = crypto.randomUUID();
-    db.prepare(
+    await db.prepare(
       'INSERT INTO columns (id, board_id, name, position, color, wip_limit) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(columnId, boardId, name.trim(), position, color || '#64748b', wip_limit || 0);
 
-    const column = db.prepare('SELECT * FROM columns WHERE id = ?').get(columnId);
+    const column = await db.prepare('SELECT * FROM columns WHERE id = ?').get(columnId);
 
     return NextResponse.json({ column }, { status: 201 });
   } catch (error) {
@@ -115,7 +115,7 @@ export async function PATCH(request, { params }) {
     const db = getDatabase();
 
     // Verify board exists and user has access
-    const board = db.prepare(`
+    const board = await db.prepare(`
       SELECT b.*, p.workspace_id FROM boards b
       INNER JOIN projects p ON p.id = b.project_id
       WHERE b.id = ?
@@ -125,7 +125,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'Board not found' }, { status: 404 });
     }
 
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(board.workspace_id, user.id);
 
@@ -139,7 +139,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'columnId is required' }, { status: 400 });
     }
 
-    const column = db.prepare(
+    const column = await db.prepare(
       'SELECT * FROM columns WHERE id = ? AND board_id = ?'
     ).get(columnId, boardId);
 
@@ -159,11 +159,11 @@ export async function PATCH(request, { params }) {
       const currentPos = column.position;
       if (position !== currentPos) {
         if (position > currentPos) {
-          db.prepare(
+          await db.prepare(
             'UPDATE columns SET position = position - 1 WHERE board_id = ? AND position > ? AND position <= ?'
           ).run(boardId, currentPos, position);
         } else {
-          db.prepare(
+          await db.prepare(
             'UPDATE columns SET position = position + 1 WHERE board_id = ? AND position >= ? AND position < ?'
           ).run(boardId, position, currentPos);
         }
@@ -185,9 +185,9 @@ export async function PATCH(request, { params }) {
     }
 
     values.push(columnId);
-    db.prepare(`UPDATE columns SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    await db.prepare(`UPDATE columns SET ${updates.join(', ')} WHERE id = ?`).run(...values);
 
-    const updatedColumn = db.prepare('SELECT * FROM columns WHERE id = ?').get(columnId);
+    const updatedColumn = await db.prepare('SELECT * FROM columns WHERE id = ?').get(columnId);
 
     return NextResponse.json({ column: updatedColumn });
   } catch (error) {
@@ -210,7 +210,7 @@ export async function DELETE(request, { params }) {
     const db = getDatabase();
 
     // Verify board exists and user has access
-    const board = db.prepare(`
+    const board = await db.prepare(`
       SELECT b.*, p.workspace_id FROM boards b
       INNER JOIN projects p ON p.id = b.project_id
       WHERE b.id = ?
@@ -220,7 +220,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Board not found' }, { status: 404 });
     }
 
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(board.workspace_id, user.id);
 
@@ -236,7 +236,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'columnId is required' }, { status: 400 });
     }
 
-    const column = db.prepare(
+    const column = await db.prepare(
       'SELECT * FROM columns WHERE id = ? AND board_id = ?'
     ).get(columnId, boardId);
 
@@ -244,35 +244,29 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Column not found on this board' }, { status: 404 });
     }
 
-    const deleteTransaction = db.transaction(() => {
-      if (moveToColumnId) {
-        // Move tasks to another column
-        const targetColumn = db.prepare('SELECT * FROM columns WHERE id = ?').get(moveToColumnId);
-        if (targetColumn) {
-          const maxPos = db.prepare(
-            'SELECT MAX(position) as max_pos FROM tasks WHERE column_id = ?'
-          ).get(moveToColumnId);
-          let nextPos = (maxPos.max_pos ?? -1) + 1;
+    if (moveToColumnId) {
+      // Move tasks to another column
+      const targetColumn = await db.prepare('SELECT * FROM columns WHERE id = ?').get(moveToColumnId);
+      if (targetColumn) {
+        const maxPos = await db.prepare(
+          'SELECT MAX(position) as max_pos FROM tasks WHERE column_id = ?'
+        ).get(moveToColumnId);
+        let nextPos = ((maxPos?.max_pos) ?? -1) + 1;
 
-          const tasks = db.prepare('SELECT id FROM tasks WHERE column_id = ?').all(columnId);
-          const updateTask = db.prepare('UPDATE tasks SET column_id = ?, position = ? WHERE id = ?');
-          for (const task of tasks) {
-            updateTask.run(moveToColumnId, nextPos++, task.id);
-          }
+        const tasks = await db.prepare('SELECT id FROM tasks WHERE column_id = ?').all(columnId);
+        const updateTask = db.prepare('UPDATE tasks SET column_id = ?, position = ? WHERE id = ?');
+        for (const task of tasks) {
+          await updateTask.run(moveToColumnId, nextPos++, task.id);
         }
       }
-      // If no moveToColumnId, tasks get deleted by CASCADE
+    }
+    // Delete the column
+    await db.prepare('DELETE FROM columns WHERE id = ?').run(columnId);
 
-      // Delete the column
-      db.prepare('DELETE FROM columns WHERE id = ?').run(columnId);
-
-      // Reorder remaining columns
-      db.prepare(
-        'UPDATE columns SET position = position - 1 WHERE board_id = ? AND position > ?'
-      ).run(boardId, column.position);
-    });
-
-    deleteTransaction();
+    // Reorder remaining columns
+    await db.prepare(
+      'UPDATE columns SET position = position - 1 WHERE board_id = ? AND position > ?'
+    ).run(boardId, column.position);
 
     return NextResponse.json({ message: 'Column deleted' });
   } catch (error) {

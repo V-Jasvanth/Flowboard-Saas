@@ -15,7 +15,7 @@ export async function POST(request) {
     const { verifyPassword, generateToken } = require('@/lib/auth');
     const db = getDatabase();
 
-    const user = db.prepare(
+    const user = await db.prepare(
       'SELECT id, name, email, password_hash, avatar_url, created_at FROM users WHERE email = ?'
     ).get(email.toLowerCase());
 

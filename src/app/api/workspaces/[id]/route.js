@@ -14,7 +14,7 @@ export async function GET(request, { params }) {
     const db = getDatabase();
 
     // Check membership
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(id, user.id);
 
@@ -22,7 +22,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Workspace not found or access denied' }, { status: 404 });
     }
 
-    const workspace = db.prepare(`
+    const workspace = await db.prepare(`
       SELECT w.*,
         (SELECT COUNT(*) FROM members WHERE workspace_id = w.id) as member_count,
         (SELECT COUNT(*) FROM projects WHERE workspace_id = w.id) as project_count
@@ -54,7 +54,7 @@ export async function PATCH(request, { params }) {
     const db = getDatabase();
 
     // Check ownership/admin
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(id, user.id);
 
@@ -80,9 +80,9 @@ export async function PATCH(request, { params }) {
     }
 
     values.push(id);
-    db.prepare(`UPDATE workspaces SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    await db.prepare(`UPDATE workspaces SET ${updates.join(', ')} WHERE id = ?`).run(...values);
 
-    const workspace = db.prepare('SELECT * FROM workspaces WHERE id = ?').get(id);
+    const workspace = await db.prepare('SELECT * FROM workspaces WHERE id = ?').get(id);
 
     return NextResponse.json({ workspace });
   } catch (error) {
@@ -100,11 +100,11 @@ export async function DELETE(request, { params }) {
     const resolvedParams = await params;
     const id = resolvedParams.id;
     const db = getDatabase();
-    const membership = db.prepare('SELECT role FROM members WHERE workspace_id = ? AND user_id = ?').get(id, user.id);
+    const membership = await db.prepare('SELECT role FROM members WHERE workspace_id = ? AND user_id = ?').get(id, user.id);
     if (!membership || membership.role !== 'owner') {
       return NextResponse.json({ error: 'Only the owner can delete the workspace' }, { status: 403 });
     }
-    db.prepare('DELETE FROM workspaces WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM workspaces WHERE id = ?').run(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete workspace error:', error);

@@ -34,14 +34,14 @@ export async function GET(request) {
     if (search) { query += ' AND (t.title LIKE ? OR t.description LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
 
     query += ' ORDER BY t.position ASC, t.created_at DESC';
-    const tasks = db.prepare(query).all(...params);
+    const tasks = await db.prepare(query).all(...params);
 
     const taskIds = tasks.map(t => t.id);
     const labels = taskIds.length > 0
-      ? db.prepare(`SELECT tl.task_id, l.* FROM task_labels tl JOIN labels l ON tl.label_id = l.id WHERE tl.task_id IN (${taskIds.map(() => '?').join(',')})`).all(...taskIds)
+      ? await db.prepare(`SELECT tl.task_id, l.* FROM task_labels tl JOIN labels l ON tl.label_id = l.id WHERE tl.task_id IN (${taskIds.map(() => '?').join(',')})`).all(...taskIds)
       : [];
     const commentCounts = taskIds.length > 0
-      ? db.prepare(`SELECT task_id, COUNT(*) as count FROM comments WHERE task_id IN (${taskIds.map(() => '?').join(',')}) GROUP BY task_id`).all(...taskIds)
+      ? await db.prepare(`SELECT task_id, COUNT(*) as count FROM comments WHERE task_id IN (${taskIds.map(() => '?').join(',')}) GROUP BY task_id`).all(...taskIds)
       : [];
 
     const labelMap = {};
@@ -77,36 +77,38 @@ export async function POST(request) {
       return NextResponse.json({ error: 'column_id, project_id, and title are required' }, { status: 400 });
     }
 
-    const maxPos = db.prepare('SELECT MAX(position) as max FROM tasks WHERE column_id = ?').get(column_id);
+    const maxPos = await db.prepare('SELECT MAX(position) as max FROM tasks WHERE column_id = ?').get(column_id);
     const position = (maxPos?.max ?? -1) + 1;
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
 
-    db.prepare(`INSERT INTO tasks (id, column_id, project_id, title, description, priority, status, assignee_id, reporter_id, due_date, position, story_points, created_at, updated_at)
+    await db.prepare(`INSERT INTO tasks (id, column_id, project_id, title, description, priority, status, assignee_id, reporter_id, due_date, position, story_points, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?)`
     ).run(id, column_id, project_id, title, description || '', priority || 'medium', assignee_id || null, user.id, due_date || null, position, story_points || 0, now, now);
 
     if (labels && labels.length > 0) {
       const insertLabel = db.prepare('INSERT INTO task_labels (task_id, label_id) VALUES (?, ?)');
-      labels.forEach(labelId => insertLabel.run(id, labelId));
+      for (const labelId of labels) {
+        await insertLabel.run(id, labelId);
+      }
     }
 
-    const project = db.prepare('SELECT workspace_id FROM projects WHERE id = ?').get(project_id);
-    db.prepare('INSERT INTO activity_log (id, workspace_id, project_id, task_id, user_id, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    const project = await db.prepare('SELECT workspace_id FROM projects WHERE id = ?').get(project_id);
+    await db.prepare('INSERT INTO activity_log (id, workspace_id, project_id, task_id, user_id, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
       .run(crypto.randomUUID(), project?.workspace_id, project_id, id, user.id, 'task_created', JSON.stringify({ taskTitle: title }), now);
 
     if (assignee_id && assignee_id !== user.id) {
-      db.prepare('INSERT INTO notifications (id, user_id, workspace_id, type, title, message, read, link, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)')
+      await db.prepare('INSERT INTO notifications (id, user_id, workspace_id, type, title, message, read, link, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)')
         .run(crypto.randomUUID(), assignee_id, project?.workspace_id, 'task_assigned', 'Task Assigned', `You have been assigned to "${title}"`, `/dashboard/board/${project_id}?highlight=${id}`, now);
         
       if (due_date) {
         const dateStr = new Date(due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        db.prepare('INSERT INTO notifications (id, user_id, workspace_id, type, title, message, read, link, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)')
+        await db.prepare('INSERT INTO notifications (id, user_id, workspace_id, type, title, message, read, link, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)')
           .run(crypto.randomUUID(), assignee_id, project?.workspace_id, 'due_date', 'Due Date Set', `The due date for "${title}" is ${dateStr}`, `/dashboard/board/${project_id}?highlight=${id}`, now);
       }
     }
 
-    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    const task = await db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
     return NextResponse.json(task, { status: 201 });
   } catch (error) {
     console.error('POST /api/tasks error:', error);

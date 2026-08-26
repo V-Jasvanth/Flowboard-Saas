@@ -64,7 +64,7 @@ export async function GET(request) {
 
     sql += ' ORDER BY t.updated_at DESC LIMIT 15';
 
-    const results = db.prepare(sql).all(...params);
+    const results = await db.prepare(sql).all(...params);
 
     // Format results with computed task key (e.g. "PL-3")
     const formatted = results.map(r => ({

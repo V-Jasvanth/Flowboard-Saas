@@ -11,7 +11,7 @@ export async function GET(request) {
     }
 
     const db = getDatabase();
-    const workspaces = db.prepare(`
+    const workspaces = await db.prepare(`
       SELECT w.*, m.role as user_role,
         (SELECT COUNT(*) FROM members WHERE workspace_id = w.id) as member_count,
         (SELECT COUNT(*) FROM projects WHERE workspace_id = w.id) as project_count
@@ -49,19 +49,19 @@ export async function POST(request) {
     const now = new Date().toISOString();
 
     // Check for slug uniqueness
-    const existingSlug = db.prepare('SELECT id FROM workspaces WHERE slug = ?').get(slug);
+    const existingSlug = await db.prepare('SELECT id FROM workspaces WHERE slug = ?').get(slug);
     const finalSlug = existingSlug ? `${slug}-${Date.now()}` : slug;
 
-    db.prepare(
+    await db.prepare(
       'INSERT INTO workspaces (id, name, slug, description, owner_id, created_at) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(workspaceId, name.trim(), finalSlug, description || null, user.id, now);
 
     // Add creator as owner
-    db.prepare(
+    await db.prepare(
       'INSERT INTO members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)'
     ).run(crypto.randomUUID(), workspaceId, user.id, 'owner', now);
 
-    const workspace = db.prepare('SELECT * FROM workspaces WHERE id = ?').get(workspaceId);
+    const workspace = await db.prepare('SELECT * FROM workspaces WHERE id = ?').get(workspaceId);
 
     return NextResponse.json({ workspace }, { status: 201 });
   } catch (error) {

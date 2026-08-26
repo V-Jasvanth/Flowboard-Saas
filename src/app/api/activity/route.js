@@ -20,7 +20,7 @@ export async function GET(request) {
     query += ' ORDER BY a.created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
-    const activities = db.prepare(query).all(...params);
+    const activities = await db.prepare(query).all(...params);
     return NextResponse.json(activities);
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

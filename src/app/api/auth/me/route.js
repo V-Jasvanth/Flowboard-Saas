@@ -53,10 +53,10 @@ export async function PATCH(request) {
 
     if (updates.length > 0) {
       values.push(user.id);
-      db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+      await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...values);
     }
 
-    const updated = db.prepare('SELECT id, name, email, avatar_url, theme, notification_preferences, created_at FROM users WHERE id = ?').get(user.id);
+    const updated = await db.prepare('SELECT id, name, email, avatar_url, theme, notification_preferences, created_at FROM users WHERE id = ?').get(user.id);
     return NextResponse.json({ user: updated });
   } catch (error) {
     console.error('PATCH /api/auth/me error:', error);

@@ -13,7 +13,7 @@ export async function GET(request, { params }) {
     const { id } = await params;
     const db = getDatabase();
 
-    const project = db.prepare(`
+    const project = await db.prepare(`
       SELECT p.*, u.name as creator_name,
         (SELECT COUNT(*) FROM tasks WHERE project_id = p.id) as task_count,
         (SELECT COUNT(*) FROM boards WHERE project_id = p.id) as board_count
@@ -27,7 +27,7 @@ export async function GET(request, { params }) {
     }
 
     // Verify workspace membership
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(project.workspace_id, user.id);
 
@@ -36,10 +36,10 @@ export async function GET(request, { params }) {
     }
 
     // Get boards for this project
-    const boards = db.prepare('SELECT * FROM boards WHERE project_id = ? ORDER BY created_at ASC').all(id);
+    const boards = await db.prepare('SELECT * FROM boards WHERE project_id = ? ORDER BY created_at ASC').all(id);
 
     // Get labels for this project
-    const labels = db.prepare('SELECT * FROM labels WHERE project_id = ?').all(id);
+    const labels = await db.prepare('SELECT * FROM labels WHERE project_id = ?').all(id);
 
     return NextResponse.json({ project, boards, labels });
   } catch (error) {
@@ -61,13 +61,13 @@ export async function PATCH(request, { params }) {
     const { id } = await params;
     const db = getDatabase();
 
-    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+    const project = await db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
     // Verify workspace membership
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(project.workspace_id, user.id);
 
@@ -92,9 +92,9 @@ export async function PATCH(request, { params }) {
     }
 
     values.push(id);
-    db.prepare(`UPDATE projects SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    await db.prepare(`UPDATE projects SET ${updates.join(', ')} WHERE id = ?`).run(...values);
 
-    const updatedProject = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+    const updatedProject = await db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
 
     return NextResponse.json({ project: updatedProject });
   } catch (error) {
@@ -116,13 +116,13 @@ export async function DELETE(request, { params }) {
     const { id } = await params;
     const db = getDatabase();
 
-    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+    const project = await db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
     // Verify workspace owner/admin
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(project.workspace_id, user.id);
 
@@ -131,10 +131,10 @@ export async function DELETE(request, { params }) {
     }
 
     // Delete project (cascades to boards, columns, tasks, labels, etc.)
-    db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM projects WHERE id = ?').run(id);
 
     // Log activity
-    db.prepare(
+    await db.prepare(
       'INSERT INTO activity_log (id, workspace_id, project_id, user_id, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
     ).run(crypto.randomUUID(), project.workspace_id, null, user.id, 'project_deleted', JSON.stringify({ projectName: project.name }), new Date().toISOString());
 

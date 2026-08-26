@@ -18,14 +18,14 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'New password must be at least 6 characters' }, { status: 400 });
     }
 
-    const dbUser = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id);
+    const dbUser = await db.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id);
     if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const valid = bcrypt.compareSync(currentPassword, dbUser.password_hash);
     if (!valid) return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
 
     const newHash = bcrypt.hashSync(newPassword, 10);
-    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
+    await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
 
     return NextResponse.json({ success: true, message: 'Password updated successfully' });
   } catch (error) {

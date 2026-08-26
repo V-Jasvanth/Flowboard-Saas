@@ -15,16 +15,16 @@ export async function GET(request, { params }) {
     const db = getDatabase();
 
     // Check membership
-    let membership = db.prepare(
+    let membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(workspaceId, user.id);
 
     if (!membership) {
-      const workspace = db.prepare('SELECT owner_id FROM workspaces WHERE id = ?').get(workspaceId);
+      const workspace = await db.prepare('SELECT owner_id FROM workspaces WHERE id = ?').get(workspaceId);
       if (workspace && workspace.owner_id === user.id) {
         membership = { role: 'owner' };
         try {
-          db.prepare(
+          await db.prepare(
             'INSERT INTO members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)'
           ).run(crypto.randomUUID(), workspaceId, user.id, 'owner', new Date().toISOString());
         } catch (e) {}
@@ -35,7 +35,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Workspace not found or access denied' }, { status: 404 });
     }
 
-    const members = db.prepare(`
+    const members = await db.prepare(`
       SELECT m.id, m.workspace_id, m.user_id, m.role, m.joined_at,
         u.name as user_name, u.email as user_email, u.avatar_url as user_avatar
       FROM members m
@@ -73,7 +73,7 @@ export async function POST(request, { params }) {
     const db = getDatabase();
 
     // Check that current user is owner or admin
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(workspaceId, user.id);
 
@@ -88,13 +88,13 @@ export async function POST(request, { params }) {
     }
 
     // Find user by email
-    const targetUser = db.prepare('SELECT id, name, email FROM users WHERE email = ?').get(email.toLowerCase());
+    const targetUser = await db.prepare('SELECT id, name, email FROM users WHERE email = ?').get(email.toLowerCase());
     if (!targetUser) {
       return NextResponse.json({ error: 'No user found with that email' }, { status: 404 });
     }
 
     // Check if already a member
-    const existingMember = db.prepare(
+    const existingMember = await db.prepare(
       'SELECT id FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(workspaceId, targetUser.id);
 
@@ -105,12 +105,12 @@ export async function POST(request, { params }) {
     const memberId = crypto.randomUUID();
     const now = new Date().toISOString();
 
-    db.prepare(
+    await db.prepare(
       'INSERT INTO members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)'
     ).run(memberId, workspaceId, targetUser.id, 'member', now);
 
     // Create notification for added user
-    db.prepare(
+    await db.prepare(
       'INSERT INTO notifications (id, user_id, workspace_id, type, title, message, link, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).run(
       crypto.randomUUID(), targetUser.id, workspaceId, 'member_added',
@@ -120,7 +120,7 @@ export async function POST(request, { params }) {
       now
     );
 
-    const member = db.prepare(`
+    const member = await db.prepare(`
       SELECT m.id, m.workspace_id, m.user_id, m.role, m.joined_at,
         u.name as user_name, u.email as user_email, u.avatar_url as user_avatar
       FROM members m
@@ -149,7 +149,7 @@ export async function PATCH(request, { params }) {
     const db = getDatabase();
 
     // Check that current user is owner or admin
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(workspaceId, user.id);
 
@@ -168,7 +168,7 @@ export async function PATCH(request, { params }) {
     }
 
     // Can't change owner role
-    const targetMember = db.prepare(
+    const targetMember = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(workspaceId, userId);
 
@@ -180,7 +180,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'Cannot change the owner\'s role' }, { status: 403 });
     }
 
-    db.prepare(
+    await db.prepare(
       'UPDATE members SET role = ? WHERE workspace_id = ? AND user_id = ?'
     ).run(role, workspaceId, userId);
 
@@ -205,7 +205,7 @@ export async function DELETE(request, { params }) {
     const db = getDatabase();
 
     // Check that current user is owner or admin
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(workspaceId, user.id);
 
@@ -220,7 +220,7 @@ export async function DELETE(request, { params }) {
     }
 
     // Can't remove owner
-    const targetMember = db.prepare(
+    const targetMember = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(workspaceId, userId);
 
@@ -232,7 +232,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Cannot remove the workspace owner' }, { status: 403 });
     }
 
-    db.prepare(
+    await db.prepare(
       'DELETE FROM members WHERE workspace_id = ? AND user_id = ?'
     ).run(workspaceId, userId);
 

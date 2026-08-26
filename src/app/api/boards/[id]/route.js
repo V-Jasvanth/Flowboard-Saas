@@ -14,7 +14,7 @@ export async function GET(request, { params }) {
     const db = getDatabase();
 
     // Get board with project info
-    const board = db.prepare(`
+    const board = await db.prepare(`
       SELECT b.*, p.workspace_id, p.name as project_name, p.key as project_key, p.color as project_color
       FROM boards b
       INNER JOIN projects p ON p.id = b.project_id
@@ -26,7 +26,7 @@ export async function GET(request, { params }) {
     }
 
     // Verify workspace membership
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(board.workspace_id, user.id);
 
@@ -35,7 +35,7 @@ export async function GET(request, { params }) {
     }
 
     // Get columns for this board
-    const columns = db.prepare(
+    const columns = await db.prepare(
       'SELECT * FROM columns WHERE board_id = ? ORDER BY position ASC'
     ).all(boardId);
 
@@ -57,17 +57,17 @@ export async function GET(request, { params }) {
       WHERE tl.task_id = ?
     `);
 
-    const columnsWithTasks = columns.map(column => {
-      const tasks = getTasksStmt.all(column.id);
-      const tasksWithLabels = tasks.map(task => ({
+    const columnsWithTasks = await Promise.all(columns.map(async column => {
+      const tasks = await getTasksStmt.all(column.id);
+      const tasksWithLabels = await Promise.all(tasks.map(async task => ({
         ...task,
-        labels: getTaskLabelsStmt.all(task.id),
-      }));
+        labels: await getTaskLabelsStmt.all(task.id),
+      })));
       return {
         ...column,
         tasks: tasksWithLabels,
       };
-    });
+    }));
 
     return NextResponse.json({
       board: {

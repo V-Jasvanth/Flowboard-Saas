@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = 'flowboard-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'flowboard-secret-key-change-in-production';
 const TOKEN_EXPIRY = '7d';
 
 function hashPassword(password) {
@@ -63,7 +63,7 @@ async function getCurrentUser(request) {
     // Fetch fresh user data from db
     const { getDatabase } = require('@/lib/db');
     const db = getDatabase();
-    const user = db.prepare(
+    const user = await db.prepare(
       'SELECT id, name, email, avatar_url, theme, notification_preferences, created_at FROM users WHERE id = ?'
     ).get(payload.id);
 

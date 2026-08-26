@@ -32,7 +32,7 @@ export async function POST(request) {
     const db = getDatabase();
 
     // Check if email already exists
-    const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
+    const existingUser = await db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
     if (existingUser) {
       return NextResponse.json(
         { error: 'An account with this email already exists' },
@@ -45,33 +45,33 @@ export async function POST(request) {
     const now = new Date().toISOString();
 
     // Create user
-    db.prepare(
+    await db.prepare(
       'INSERT INTO users (id, name, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)'
     ).run(userId, name, email.toLowerCase(), passwordHash, now);
 
     // Create a default workspace for the user
     const workspaceId = crypto.randomUUID();
     const baseSlug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-workspace`;
-    const existingSlug = db.prepare('SELECT id FROM workspaces WHERE slug = ?').get(baseSlug);
+    const existingSlug = await db.prepare('SELECT id FROM workspaces WHERE slug = ?').get(baseSlug);
     const slug = existingSlug ? `${baseSlug}-${Date.now()}` : baseSlug;
-    db.prepare(
+    await db.prepare(
       'INSERT INTO workspaces (id, name, slug, description, owner_id, created_at) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(workspaceId, `${name}'s Workspace`, slug, `Default workspace for ${name}`, userId, now);
 
     // Add user as owner member
-    db.prepare(
+    await db.prepare(
       'INSERT INTO members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)'
     ).run(crypto.randomUUID(), workspaceId, userId, 'owner', now);
 
     // Create a default project
     const projectId = crypto.randomUUID();
-    db.prepare(
+    await db.prepare(
       'INSERT INTO projects (id, workspace_id, name, description, key, color, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).run(projectId, workspaceId, 'My First Project', 'Get started with your first project', 'MFP', '#6366f1', userId, now);
 
     // Create a default board
     const boardId = crypto.randomUUID();
-    db.prepare(
+    await db.prepare(
       'INSERT INTO boards (id, project_id, name, created_at) VALUES (?, ?, ?, ?)'
     ).run(boardId, projectId, 'Main Board', now);
 
@@ -88,7 +88,7 @@ export async function POST(request) {
       'INSERT INTO columns (id, board_id, name, position, color, wip_limit) VALUES (?, ?, ?, ?, ?, ?)'
     );
     for (const col of defaultColumns) {
-      insertColumn.run(crypto.randomUUID(), boardId, col.name, col.position, col.color, col.wipLimit);
+      await insertColumn.run(crypto.randomUUID(), boardId, col.name, col.position, col.color, col.wipLimit);
     }
 
     // Generate token

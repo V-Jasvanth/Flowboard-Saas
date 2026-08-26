@@ -19,7 +19,7 @@ export async function GET(request) {
     }
 
     // Verify membership
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(workspaceId, user.id);
 
@@ -27,7 +27,7 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Workspace not found or access denied' }, { status: 404 });
     }
 
-    const projects = db.prepare(`
+    const projects = await db.prepare(`
       SELECT p.*,
         u.name as creator_name,
         (SELECT COUNT(*) FROM tasks WHERE project_id = p.id) as task_count,
@@ -67,7 +67,7 @@ export async function POST(request) {
     const db = getDatabase();
 
     // Verify membership
-    const membership = db.prepare(
+    const membership = await db.prepare(
       'SELECT role FROM members WHERE workspace_id = ? AND user_id = ?'
     ).get(workspace_id, user.id);
 
@@ -79,42 +79,38 @@ export async function POST(request) {
     const boardId = crypto.randomUUID();
     const now = new Date().toISOString();
 
-    const createProject = db.transaction(() => {
-      // Create the project
-      db.prepare(
-        'INSERT INTO projects (id, workspace_id, name, description, key, color, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(projectId, workspace_id, name.trim(), description || null, key.toUpperCase(), color || '#6366f1', user.id, now);
+    // Create the project
+    await db.prepare(
+      'INSERT INTO projects (id, workspace_id, name, description, key, color, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(projectId, workspace_id, name.trim(), description || null, key.toUpperCase(), color || '#6366f1', user.id, now);
 
-      // Create a default board
-      db.prepare(
-        'INSERT INTO boards (id, project_id, name, created_at) VALUES (?, ?, ?, ?)'
-      ).run(boardId, projectId, 'Main Board', now);
+    // Create a default board
+    await db.prepare(
+      'INSERT INTO boards (id, project_id, name, created_at) VALUES (?, ?, ?, ?)'
+    ).run(boardId, projectId, 'Main Board', now);
 
-      // Create default columns
-      const defaultColumns = [
-        { name: 'Backlog', position: 0, color: '#64748b', wipLimit: 0 },
-        { name: 'To Do', position: 1, color: '#3b82f6', wipLimit: 5 },
-        { name: 'In Progress', position: 2, color: '#f59e0b', wipLimit: 3 },
-        { name: 'In Review', position: 3, color: '#8b5cf6', wipLimit: 3 },
-        { name: 'Done', position: 4, color: '#22c55e', wipLimit: 0 },
-      ];
+    // Create default columns
+    const defaultColumns = [
+      { name: 'Backlog', position: 0, color: '#64748b', wipLimit: 0 },
+      { name: 'To Do', position: 1, color: '#3b82f6', wipLimit: 5 },
+      { name: 'In Progress', position: 2, color: '#f59e0b', wipLimit: 3 },
+      { name: 'In Review', position: 3, color: '#8b5cf6', wipLimit: 3 },
+      { name: 'Done', position: 4, color: '#22c55e', wipLimit: 0 },
+    ];
 
-      const insertColumn = db.prepare(
-        'INSERT INTO columns (id, board_id, name, position, color, wip_limit) VALUES (?, ?, ?, ?, ?, ?)'
-      );
-      for (const col of defaultColumns) {
-        insertColumn.run(crypto.randomUUID(), boardId, col.name, col.position, col.color, col.wipLimit);
-      }
+    const insertColumn = db.prepare(
+      'INSERT INTO columns (id, board_id, name, position, color, wip_limit) VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    for (const col of defaultColumns) {
+      await insertColumn.run(crypto.randomUUID(), boardId, col.name, col.position, col.color, col.wipLimit);
+    }
 
-      // Log activity
-      db.prepare(
-        'INSERT INTO activity_log (id, workspace_id, project_id, user_id, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).run(crypto.randomUUID(), workspace_id, projectId, user.id, 'project_created', JSON.stringify({ projectName: name.trim() }), now);
-    });
+    // Log activity
+    await db.prepare(
+      'INSERT INTO activity_log (id, workspace_id, project_id, user_id, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(crypto.randomUUID(), workspace_id, projectId, user.id, 'project_created', JSON.stringify({ projectName: name.trim() }), now);
 
-    createProject();
-
-    const project = db.prepare(`
+    const project = await db.prepare(`
       SELECT p.*, u.name as creator_name
       FROM projects p
       LEFT JOIN users u ON u.id = p.created_by

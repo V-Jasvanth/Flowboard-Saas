@@ -35,7 +35,7 @@ export async function POST(request) {
 
     const { getDatabase } = require('@/lib/db');
     const db = getDatabase();
-    db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, user.id);
+    await db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, user.id);
 
     return NextResponse.json({ success: true, avatar_url: avatarUrl });
   } catch (error) {

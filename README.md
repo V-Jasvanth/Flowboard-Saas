@@ -41,6 +41,8 @@ FlowBoard is a full-stack project management application inspired by Jira. It en
 - Comments
 - Labels
 
+
+
 ### Dashboard
 - Project Overview
 - Recent Activity

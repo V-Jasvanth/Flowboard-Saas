@@ -166,3 +166,15 @@ Production Ready
 GitHub: https://github.com/V-Jasvanth
 FlowBoard is a modern project management SaaS for organizing teams, tasks, and workflows.
 Achievement test completed.
+
+
+## Project Status
+
+FlowBoard is actively under development.
+
+Current focus:
+- Core project management workflows
+- Task and board management
+- Authentication and workspace features
+- UI and usability improvements
+- 

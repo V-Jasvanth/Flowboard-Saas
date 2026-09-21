@@ -135,17 +135,12 @@ JWT_SECRET=your_secret
 (Add any other variables your project requires.)
 
 ---
-
 # Current Status
-
 Current Version: **v1.0.0**
 
 Production Ready
-
 ---
-
 # Future Improvements
-
 - Password Reset
 - Team Invitations
 - Real-time Collaboration

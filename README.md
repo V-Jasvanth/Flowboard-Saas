@@ -41,6 +41,8 @@ FlowBoard is a full-stack project management application inspired by Jira. It en
 - Comments
 - Labels
 
+
+
 ### Dashboard
 - Project Overview
 - Recent Activity
@@ -157,3 +159,17 @@ Production Ready
 **Vekanuru Jasvanth**
 
 GitHub: https://github.com/V-Jasvanth
+FlowBoard is a modern project management SaaS for organizing teams, tasks, and workflows.
+Achievement test completed.
+
+
+## Project Status
+
+FlowBoard is actively under development.
+
+Current focus:
+- Core project management workflows
+- Task and board management
+- Authentication and workspace features
+- UI and usability improvements
+- 
